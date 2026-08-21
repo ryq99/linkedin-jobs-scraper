@@ -9,7 +9,7 @@ LinkedIn's stable `componentkey` attributes; parsing happens in parsers.py.
 import logging
 import urllib.parse
 
-from playwright.sync_api import Page
+from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
 
 import config
 from watchdog import OperationTimeout, time_limit
@@ -64,6 +64,26 @@ _COLLECT_SECTIONS_JS = """
 }
 """
 
+def _goto(page: Page, url: str, tries: int = 2) -> None:
+    """Navigate with wait_until='commit' — return once the response is committed,
+    not when DOMContentLoaded fires.
+
+    LinkedIn's jobs SPA no longer reliably fires DOMContentLoaded within the nav
+    timeout (the document 200s in <2s, but async activity keeps the ready event
+    lagging), so 'domcontentloaded' intermittently timed out even on pages that
+    render fine. Readiness is asserted separately by the caller's
+    wait_for_selector on the anchor it actually needs. Retries once with backoff
+    on a genuine navigation timeout."""
+    for attempt in range(1, tries + 1):
+        try:
+            page.goto(url, wait_until="commit")
+            return
+        except PlaywrightTimeoutError:
+            if attempt == tries:
+                raise
+            log.warning("goto timed out (attempt %d) for %s — retrying", attempt, url)
+            page.wait_for_timeout(2_000)
+
 def build_search_url(query: str, window: str = "", start: int = 0) -> str:
     params = {"keywords": query}
     if window:
@@ -80,15 +100,17 @@ def harvest_query(page: Page, query: str, window: str, max_pages: int) -> list[d
             # Hard cap the whole page so a wedged driver (evaluate has no
             # Playwright timeout of its own) can't hang harvesting.
             with time_limit(config.HARVEST_PAGE_TIMEOUT, f"harvest {query!r} page {page_num + 1}"):
-                page.goto(build_search_url(query, window, page_num * PAGE_SIZE), wait_until="domcontentloaded")
+                _goto(page, build_search_url(query, window, page_num * PAGE_SIZE))
                 try:
                     page.wait_for_selector(CARD_SELECTOR, timeout=15_000)
-                except Exception:
+                except PlaywrightTimeoutError:
                     break  # no cards rendered = past the last page
                 page.evaluate(_SCROLL_LIST_JS)
                 page.wait_for_timeout(1_500)
                 cards = page.evaluate(_HARVEST_JS)
-        except OperationTimeout as e:
+        except (OperationTimeout, PlaywrightTimeoutError) as e:
+            # A slow/timed-out search page skips this query instead of killing
+            # the whole run (previously an uncaught goto TimeoutError => 0 cards).
             log.warning("%s — stopping pagination for this query", e)
             break
         log.info("query=%r page=%d cards=%d", query, page_num + 1, len(cards))
@@ -113,7 +135,7 @@ def extract_sections(page: Page, job_id: str) -> dict:
     main.scrape_details, so one bad job is skipped rather than freezing the run.
     """
     with time_limit(config.DETAIL_VISIT_TIMEOUT, f"detail visit {job_id}"):
-        page.goto(job_url(job_id), wait_until="domcontentloaded")
+        _goto(page, job_url(job_id))
         page.wait_for_selector(f'[componentkey^="{SECTION_PREFIXES["about_job"]}"]', timeout=15_000)
         for _ in range(4):  # progressive scroll triggers lazy sections (AboutTheCompany, insights)
             page.mouse.wheel(0, 1_500)
