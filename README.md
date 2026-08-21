@@ -4,6 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![HF Dataset](https://img.shields.io/badge/%F0%9F%A4%97%20Dataset-linkedin--job--scrape-yellow)](https://huggingface.co/datasets/ryang2/linkedin-job-scrape)
+[![Last commit](https://img.shields.io/github/last-commit/ryq99/linkedin-jobs-scraper)](https://github.com/ryq99/linkedin-jobs-scraper/commits/main)
 
 A lightweight daily scraping pipeline for data science / machine learning jobs on LinkedIn — Playwright + SQLite, publishing an open dataset to the Hugging Face Hub.
 
