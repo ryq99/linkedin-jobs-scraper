@@ -160,11 +160,16 @@ python src/main.py export --date 2026-07-18                    # re-export a day
 
 AWS credentials (`aws configure`) are needed only for exports (S3 write + SSM read of the HF token).
 
-**Schedule (unattended overnight run):** three pieces, because launchd alone does *not* wake a sleeping Mac — it only runs the job once the machine is awake.
+**Schedule (unattended overnight run):** two one-time commands, because launchd alone does *not* wake a sleeping Mac — it only runs the job once the machine is awake.
 
-1. **Wake** — install a daily hardware wake once: `sudo ./scripts/setup_wake_schedule.sh` (`pmset repeat wake` at 21:58; undo with `sudo pmset repeat cancel`, inspect with `pmset -g sched`).
-2. **Run** — copy `infra/linkedin-scraper.plist.example` to `~/Library/LaunchAgents/`, fix the two paths, `launchctl load` it. launchd fires `run_daily.sh --sleep-after` at 22:00; output lands in `logs/scrape.log`.
-3. **Stay awake, then sleep** — the wrapper runs the scrape under `caffeinate` so idle sleep can't kill it mid-run, then `--sleep-after` returns the Mac to sleep once the upload finishes (manual runs omit the flag, so they never sleep your machine).
+```bash
+./scripts/install_daily_trigger.sh        # launchd job @ 22:00 (no sudo; idempotent — rerun after pulling)
+sudo ./scripts/setup_wake_schedule.sh     # pmset wake @ 21:58 so the Mac is awake when the job fires
+```
+
+- **Wake** — `setup_wake_schedule.sh` installs `pmset repeat wake` at 21:58 (undo with `sudo pmset repeat cancel`, inspect with `pmset -g sched`). **Without this, the job only runs if the Mac is already awake at 22:00; a sleeping Mac won't wake, and a shut-down Mac won't power on.**
+- **Run** — `install_daily_trigger.sh` renders the plist for this checkout, replaces any older copy, and loads it; launchd fires `run_daily.sh --sleep-after` at 22:00 → `logs/scrape.log`.
+- **Stay awake, then sleep** — the wrapper runs the scrape under `caffeinate` so idle sleep can't kill it mid-run, then `--sleep-after` returns the Mac to sleep once the upload finishes (manual runs omit the flag, so they never sleep your machine).
 
 Failed runs save a Playwright trace to `logs/traces/` — inspect with `playwright show-trace <file>`.
 
