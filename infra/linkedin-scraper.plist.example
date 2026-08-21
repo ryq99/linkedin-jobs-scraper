@@ -11,10 +11,9 @@
   The wrapper then runs the scrape under `caffeinate` (stays awake through the
   upload) and, because of the --sleep-after arg below, sleeps the Mac when done.
 
-  Install:
-    cp infra/linkedin-scraper.plist.example ~/Library/LaunchAgents/com.<you>.linkedin-scraper.plist
-    # edit the two /path/to/ds_jobs paths below, then:
-    launchctl load ~/Library/LaunchAgents/com.<you>.linkedin-scraper.plist
+  Install: don't copy this by hand — run the installer, which renders the two
+  /path/to/ds_jobs paths and the Label for this checkout, then (re)loads it:
+    ./scripts/install_daily_trigger.sh
 -->
 <plist version="1.0">
 <dict>
