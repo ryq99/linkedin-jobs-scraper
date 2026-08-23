@@ -101,8 +101,11 @@ flowchart TD
 | `src/schemas.py` | `Job` dataclass — the full record schema |
 | `src/store.py` | SQLite: `jobs` + `runs` tables, dedup, resumability, completeness metrics |
 | `src/export.py` | S3 CSV + HF split push (same naming as the original pipeline) |
+| `src/watchdog.py` | Wall-clock guards (SIGALRM per-op cap + whole-run deadline) so a wedged browser can't hang the run |
 | `tests/` | Parser fixtures captured from the live site + store round-trip tests |
-| `scripts/run_daily.sh` | launchd/cron wrapper (venv + `.env` + logging) |
+| `scripts/run_daily.sh` | Run wrapper: `caffeinate` during the scrape + optional `--sleep-after` |
+| `scripts/install_daily_trigger.sh` | Install/refresh the launchd job (renders the plist for this checkout) |
+| `scripts/setup_wake_schedule.sh` | One-time `sudo pmset repeat wake` so the Mac wakes for the overnight run |
 | `infra/linkedin-scraper.plist.example` | launchd schedule template (daily 22:00) |
 
 ## Data Model
