@@ -1,13 +1,15 @@
 """Typed record extracted from a job_description by the info_extractor.
 
 One JobSkills per posting, keyed by job_id back to the scraped `jobs` table.
-Missing values are None / empty list (never sentinel strings), matching the
-convention in src/schemas.py. The constrained fields draw from the enums below,
-which double as the allowed-value sets for the extraction prompt/schema.
+JobSkills is a Pydantic model (not a stdlib dataclass) because it validates
+untrusted LLM output: the enum-typed fields reject values Claude invents, and
+`model_json_schema()` feeds the API's structured-output format from this one
+source of truth. Missing values are None / empty list, matching src/schemas.py.
 """
 
-from dataclasses import dataclass, field, fields
 from enum import Enum
+
+from pydantic import BaseModel, ConfigDict
 
 SCHEMA_VERSION = 1  # bump when fields/enums change, to target re-extraction
 
@@ -49,25 +51,26 @@ class Education(str, Enum):
     PHD = "PhD"
 
 
-@dataclass
-class JobSkills:
+class JobSkills(BaseModel):
     """The extraction target the LLM fills for one posting."""
+
+    model_config = ConfigDict(extra="forbid")  # reject fields the model invents
 
     job_id: str  # FK to jobs.job_id
 
-    # normalization + classification
+    # normalization + classification (enum-typed → invalid values are rejected)
     canonical_title: str | None = None
-    role_family: str | None = None            # a RoleFamily value
-    seniority: str | None = None              # a Seniority value
+    role_family: RoleFamily | None = None
+    seniority: Seniority | None = None
     years_experience_min: int | None = None
-    modeling_area: list[str] = field(default_factory=list)   # ModelingArea values
+    modeling_area: list[ModelingArea] = []
 
     # extraction
-    must_have_skills: list[str] = field(default_factory=list)
-    nice_to_have_skills: list[str] = field(default_factory=list)
-    tools: list[str] = field(default_factory=list)
-    education_req: str | None = None          # an Education value
-    domain: list[str] = field(default_factory=list)
+    must_have_skills: list[str] = []
+    nice_to_have_skills: list[str] = []
+    tools: list[str] = []
+    education_req: Education | None = None
+    domain: list[str] = []
 
     # provenance
     extract_model: str | None = None
@@ -75,4 +78,4 @@ class JobSkills:
     schema_version: int = SCHEMA_VERSION
 
 
-JOBSKILLS_FIELDS = [f.name for f in fields(JobSkills)]
+JOBSKILLS_FIELDS = list(JobSkills.model_fields)
