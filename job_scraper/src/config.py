@@ -3,7 +3,10 @@
 import os
 from pathlib import Path
 
-PROJECT_DIR = Path(__file__).resolve().parent.parent
+# job_scraper/src/config.py -> job_scraper/ (component) -> repo root
+PROJECT_DIR = Path(__file__).resolve().parent.parent   # job_scraper/ — component-owned runtime
+REPO_DIR = PROJECT_DIR.parent                          # repo root — shared with info_extractor
+DATA_DIR = REPO_DIR / "data"                           # shared jobs.db lives here
 
 # --- scraping ---------------------------------------------------------------
 _DEFAULT_QUERIES = "machine learning scientist, machine learning engineer, data scientist"
@@ -21,9 +24,9 @@ DETAIL_VISIT_TIMEOUT = int(os.getenv("DETAIL_VISIT_TIMEOUT", "90"))  # per detai
 HARVEST_PAGE_TIMEOUT = int(os.getenv("HARVEST_PAGE_TIMEOUT", "60"))  # per search-results page hard cap
 
 # --- paths ------------------------------------------------------------------
-DB_PATH = Path(os.getenv("DB_PATH", PROJECT_DIR / "data" / "jobs.db"))
-PROFILE_DIR = Path(os.getenv("PROFILE_DIR", PROJECT_DIR / "chrome_user_data"))
-TRACE_DIR = PROJECT_DIR / "logs" / "traces"
+DB_PATH = Path(os.getenv("DB_PATH", DATA_DIR / "jobs.db"))         # shared (repo root)
+PROFILE_DIR = Path(os.getenv("PROFILE_DIR", PROJECT_DIR / "chrome_user_data"))  # component-owned
+TRACE_DIR = PROJECT_DIR / "logs" / "traces"                        # component-owned
 KEEP_TRACES = 5
 
 # --- export sinks (only required by the export step) ------------------------
