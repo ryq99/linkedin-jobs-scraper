@@ -27,8 +27,8 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt && playwright install chromium
 cp .env.example .env
 
-python src/main.py login                                       # one-time: log in (incl. 2FA); session persists
-python src/main.py scrape --headed --max-pages 2 --no-export   # watch a small dry run live
+python job_scraper/src/main.py login                                       # one-time: log in (incl. 2FA); session persists
+python job_scraper/src/main.py scrape --headed --max-pages 2 --no-export   # watch a small dry run live
 ```
 
 See [Running Locally](#running-locally) for exports, scheduling, and tests.
@@ -52,8 +52,8 @@ See [Running Locally](#running-locally) for exports, scheduling, and tests.
 
 ```mermaid
 flowchart TD
-    A["launchd daily 22:00<br/>or manual: python src/main.py scrape"] --> B{"Session still<br/>logged in?"}
-    B -- no --> B1["exit 2 + macOS notification<br/>fix: python src/main.py login (one time)"]
+    A["launchd daily 22:00<br/>or manual: python job_scraper/src/main.py scrape"] --> B{"Session still<br/>logged in?"}
+    B -- no --> B1["exit 2 + macOS notification<br/>fix: python job_scraper/src/main.py login (one time)"]
     B -- yes --> C["Phase A — harvest cards<br/>for each query:<br/>/jobs/search-results/?keywords=…&f_TPR=r86400&start=N<br/>25 cards per page, one JS pass per page"]
     C --> D{"Any cards<br/>found?"}
     D -- no --> D1["exit 1 selector tripwire<br/>+ notification + saved trace"]
@@ -93,20 +93,20 @@ flowchart TD
 
 | Path | Responsibility |
 |---|---|
-| `src/main.py` | Entrypoint + orchestration: `login` \| `scrape` \| `export` \| `stats` |
-| `src/config.py` | Env vars + defaults (queries, window, caps, paths) |
-| `src/browser.py` | Playwright persistent context, request blocking, login check, tracing |
-| `src/crawler.py` | All LinkedIn DOM access — Phase A card harvesting + Phase B `/jobs/view/{id}` section extraction via `componentkey` |
-| `src/parsers.py` | Pure text→field functions: card, top card, salary, insights, hiring team |
-| `src/schemas.py` | `Job` dataclass — the full record schema |
-| `src/store.py` | SQLite: `jobs` + `runs` tables, dedup, resumability, completeness metrics |
-| `src/export.py` | S3 CSV + HF split push (same naming as the original pipeline) |
-| `src/watchdog.py` | Wall-clock guards (SIGALRM per-op cap + whole-run deadline) so a wedged browser can't hang the run |
-| `tests/` | Parser fixtures captured from the live site + store round-trip tests |
-| `scripts/run_daily.sh` | Run wrapper: `caffeinate` during the scrape + optional `--sleep-after` |
-| `scripts/install_daily_trigger.sh` | Install/refresh the launchd job (renders the plist for this checkout) |
-| `scripts/setup_wake_schedule.sh` | One-time `sudo pmset repeat wake` so the Mac wakes for the overnight run |
-| `infra/linkedin-scraper.plist.example` | launchd schedule template (daily 22:00) |
+| `job_scraper/src/main.py` | Entrypoint + orchestration: `login` \| `scrape` \| `export` \| `stats` |
+| `job_scraper/src/config.py` | Env vars + defaults (queries, window, caps, paths) |
+| `job_scraper/src/browser.py` | Playwright persistent context, request blocking, login check, tracing |
+| `job_scraper/src/crawler.py` | All LinkedIn DOM access — Phase A card harvesting + Phase B `/jobs/view/{id}` section extraction via `componentkey` |
+| `job_scraper/src/parsers.py` | Pure text→field functions: card, top card, salary, insights, hiring team |
+| `job_scraper/src/schemas.py` | `Job` dataclass — the full record schema |
+| `job_scraper/src/store.py` | SQLite: `jobs` + `runs` tables, dedup, resumability, completeness metrics |
+| `job_scraper/src/export.py` | S3 CSV + HF split push (same naming as the original pipeline) |
+| `job_scraper/src/watchdog.py` | Wall-clock guards (SIGALRM per-op cap + whole-run deadline) so a wedged browser can't hang the run |
+| `job_scraper/tests/` | Parser fixtures captured from the live site + store round-trip tests |
+| `job_scraper/scripts/run_daily.sh` | Run wrapper: `caffeinate` during the scrape + optional `--sleep-after` |
+| `job_scraper/scripts/install_daily_trigger.sh` | Install/refresh the launchd job (renders the plist for this checkout) |
+| `job_scraper/scripts/setup_wake_schedule.sh` | One-time `sudo pmset repeat wake` so the Mac wakes for the overnight run |
+| `job_scraper/infra/linkedin-scraper.plist.example` | launchd schedule template (daily 22:00) |
 
 ## Data Model
 
@@ -125,9 +125,9 @@ One row per job posting (`Job` dataclass → `jobs` table; missing values are NU
 | People | Login | `hiring_team` (JSON: name + title) |
 | Store meta | Derived | `first_seen`, `last_seen`, `times_seen` |
 
-**Privacy rule:** `Login` and `Premium` fields are gathered through a personal account and are personalized/gated — they stay in the local SQLite store and the private S3 snapshots only, and are **excluded from the public Hugging Face dataset** (`PRIVATE_FIELDS` in `src/schemas.py`, applied by `public_view()` in `src/export.py`).
+**Privacy rule:** `Login` and `Premium` fields are gathered through a personal account and are personalized/gated — they stay in the local SQLite store and the private S3 snapshots only, and are **excluded from the public Hugging Face dataset** (`PRIVATE_FIELDS` in `job_scraper/src/schemas.py`, applied by `public_view()` in `job_scraper/src/export.py`).
 
-**Exports**: S3 `{S3_PREFIX}/linkedin-scrape_{ts}.csv` (full schema, private bucket); HF one split per run (`ts` with underscores, **public fields only**), dataset card synced from `hf_dataset_readme.md`. License: BigScience OpenRAIL-M — research/educational use.
+**Exports**: S3 `{S3_PREFIX}/linkedin-scrape_{ts}.csv` (full schema, private bucket); HF one split per run (`ts` with underscores, **public fields only**), dataset card synced from `job_scraper/hf_dataset_readme.md`. License: BigScience OpenRAIL-M — research/educational use.
 
 ## Configuration
 
@@ -154,11 +154,11 @@ pip install -r requirements.txt
 playwright install chromium
 cp .env.example .env    # fill in S3_PREFIX / HF_REPO_ID for exports
 
-python src/main.py login                                       # one-time: log in (incl. 2FA); session persists
-python src/main.py scrape --headed --max-pages 2 --no-export   # watch a small dry run live
-python src/main.py scrape --window r604800                     # first real run: seed with past week
-python src/main.py stats                                       # store overview
-python src/main.py export --date 2026-07-18                    # re-export a day on demand
+python job_scraper/src/main.py login                                       # one-time: log in (incl. 2FA); session persists
+python job_scraper/src/main.py scrape --headed --max-pages 2 --no-export   # watch a small dry run live
+python job_scraper/src/main.py scrape --window r604800                     # first real run: seed with past week
+python job_scraper/src/main.py stats                                       # store overview
+python job_scraper/src/main.py export --date 2026-07-18                    # re-export a day on demand
 ```
 
 AWS credentials (`aws configure`) are needed only for exports (S3 write + SSM read of the HF token).
@@ -166,8 +166,8 @@ AWS credentials (`aws configure`) are needed only for exports (S3 write + SSM re
 **Schedule (unattended overnight run):** two one-time commands, because launchd alone does *not* wake a sleeping Mac — it only runs the job once the machine is awake.
 
 ```bash
-./scripts/install_daily_trigger.sh        # launchd job @ 22:00 (no sudo; idempotent — rerun after pulling)
-sudo ./scripts/setup_wake_schedule.sh     # pmset wake @ 21:58 so the Mac is awake when the job fires
+./job_scraper/scripts/install_daily_trigger.sh        # launchd job @ 22:00 (no sudo; idempotent — rerun after pulling)
+sudo ./job_scraper/scripts/setup_wake_schedule.sh     # pmset wake @ 21:58 so the Mac is awake when the job fires
 ```
 
 - **Wake** — `setup_wake_schedule.sh` installs `pmset repeat wake` at 21:58 (undo with `sudo pmset repeat cancel`, inspect with `pmset -g sched`). **Without this, the job only runs if the Mac is already awake at 22:00; a sleeping Mac won't wake, and a shut-down Mac won't power on.**
