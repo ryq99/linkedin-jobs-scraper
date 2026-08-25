@@ -5,4 +5,5 @@ awswrangler
 datasets
 huggingface_hub
 pydantic
+python-dotenv
 pytest
