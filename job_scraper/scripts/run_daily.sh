@@ -30,13 +30,14 @@ for arg in "$@"; do
 done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"   # job_scraper/ — component-owned logs/.env
+REPO_DIR="$(dirname "$PROJECT_DIR")"     # repo root — shared .venv
 LOG_DIR="$PROJECT_DIR/logs"
 mkdir -p "$LOG_DIR"
 
 echo "===== LinkedIn scraper started at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ====="
 
-VENV="$PROJECT_DIR/.venv"
+VENV="$REPO_DIR/.venv"                    # one shared virtualenv for the repo
 if [[ -d "$VENV" ]]; then
     # shellcheck disable=SC1091
     source "$VENV/bin/activate"
