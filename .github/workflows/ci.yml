@@ -19,4 +19,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - run: pip install -r requirements.txt
-      - run: pytest
+      - run: pytest                                  # scraper (src/)
+      - run: pytest                                  # info_extractor component
+        working-directory: info_extractor
