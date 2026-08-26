@@ -52,7 +52,7 @@ See [Running Locally](#running-locally) for exports, scheduling, and tests.
 
 ```mermaid
 flowchart TD
-    A["launchd daily 22:00<br/>or manual: python job_scraper/src/main.py scrape"] --> B{"Session still<br/>logged in?"}
+    A["launchd daily 03:00<br/>or manual: python job_scraper/src/main.py scrape"] --> B{"Session still<br/>logged in?"}
     B -- no --> B1["exit 2 + macOS notification<br/>fix: python job_scraper/src/main.py login (one time)"]
     B -- yes --> C["Phase A — harvest cards<br/>for each query:<br/>/jobs/search-results/?keywords=…&f_TPR=r86400&start=N<br/>25 cards per page, one JS pass per page"]
     C --> D{"Any cards<br/>found?"}
@@ -106,7 +106,7 @@ flowchart TD
 | `job_scraper/scripts/run_daily.sh` | Run wrapper: `caffeinate` during the scrape + optional `--sleep-after` |
 | `job_scraper/scripts/install_daily_trigger.sh` | Install/refresh the launchd job (renders the plist for this checkout) |
 | `job_scraper/scripts/setup_wake_schedule.sh` | One-time `sudo pmset repeat wake` so the Mac wakes for the overnight run |
-| `job_scraper/infra/linkedin-scraper.plist.example` | launchd schedule template (daily 22:00) |
+| `job_scraper/infra/linkedin-scraper.plist.example` | launchd schedule template (daily 03:00) |
 
 ## Data Model
 
@@ -166,12 +166,12 @@ AWS credentials (`aws configure`) are needed only for exports (S3 write + SSM re
 **Schedule (unattended overnight run):** two one-time commands, because launchd alone does *not* wake a sleeping Mac — it only runs the job once the machine is awake.
 
 ```bash
-./job_scraper/scripts/install_daily_trigger.sh        # launchd job @ 22:00 (no sudo; idempotent — rerun after pulling)
-sudo ./job_scraper/scripts/setup_wake_schedule.sh     # pmset wake @ 21:58 so the Mac is awake when the job fires
+./job_scraper/scripts/install_daily_trigger.sh        # launchd job @ 03:00 (no sudo; idempotent — rerun after pulling)
+sudo ./job_scraper/scripts/setup_wake_schedule.sh     # pmset wake @ 02:58 so the Mac is awake when the job fires
 ```
 
-- **Wake** — `setup_wake_schedule.sh` installs `pmset repeat wake` at 21:58 (undo with `sudo pmset repeat cancel`, inspect with `pmset -g sched`). **Without this, the job only runs if the Mac is already awake at 22:00; a sleeping Mac won't wake, and a shut-down Mac won't power on.**
-- **Run** — `install_daily_trigger.sh` renders the plist for this checkout, replaces any older copy, and loads it; launchd fires `run_daily.sh --sleep-after` at 22:00 → `logs/scrape.log`.
+- **Wake** — `setup_wake_schedule.sh` installs `pmset repeat wake` at 02:58 (undo with `sudo pmset repeat cancel`, inspect with `pmset -g sched`). **Without this, the job only runs if the Mac is already awake at 03:00; a sleeping Mac won't wake, and a shut-down Mac won't power on.**
+- **Run** — `install_daily_trigger.sh` renders the plist for this checkout, replaces any older copy, and loads it; launchd fires `run_daily.sh --sleep-after` at 03:00 → `logs/scrape.log`.
 - **Stay awake, then sleep** — the wrapper runs the scrape under `caffeinate` so idle sleep can't kill it mid-run, then `--sleep-after` returns the Mac to sleep once the upload finishes (manual runs omit the flag, so they never sleep your machine).
 
 Failed runs save a Playwright trace to `logs/traces/` — inspect with `playwright show-trace <file>`.
