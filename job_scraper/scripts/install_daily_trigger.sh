@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
 # install_daily_trigger.sh — install (or refresh) the launchd job that runs the
-#                            scraper at 22:00 daily.
+#                            scraper at 03:00 daily.
 #
 # Renders infra/linkedin-scraper.plist.example with this checkout's real path,
 # installs it to ~/Library/LaunchAgents, removes any older copy, and (re)loads
@@ -51,5 +51,5 @@ echo
 launchctl print "gui/$UID_NUM/$LABEL" 2>/dev/null | grep -E "state =|program =|--sleep-after" || true
 echo
 echo "Next (one time, needs sudo — the piece launchd can't do):"
-echo "    sudo $SCRIPT_DIR/setup_wake_schedule.sh    # wakes the Mac at 21:58 so the 22:00 job can run while asleep"
+echo "    sudo $SCRIPT_DIR/setup_wake_schedule.sh    # wakes the Mac at 02:58 so the 03:00 job can run while asleep"
 echo "Verify the wake with:  pmset -g sched"

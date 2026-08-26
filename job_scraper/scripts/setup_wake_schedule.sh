@@ -6,7 +6,7 @@
 # THIS IS THE PIECE launchd CANNOT DO. `StartCalendarInterval` in the plist
 # only runs the job when the Mac is already awake (or on its next wake) — it
 # does NOT wake a sleeping Mac. `pmset repeat wake` schedules an actual
-# hardware wake event so the machine is awake when launchd fires at 22:00.
+# hardware wake event so the machine is awake when launchd fires at 03:00.
 #
 # Run ONCE, with sudo (pmset scheduling requires root):
 #   sudo ./scripts/setup_wake_schedule.sh
@@ -26,9 +26,9 @@ if [[ "$(id -u)" -ne 0 ]]; then
     exit 1
 fi
 
-# Wake every day at 21:58, a 2-minute buffer before the 22:00 launchd job.
+# Wake every day at 02:58, a 2-minute buffer before the 03:00 launchd job.
 # MTWRFSU = Mon Tue Wed Thu Fri Sat Sun (every day).
-pmset repeat wake MTWRFSU 21:58:00
+pmset repeat wake MTWRFSU 02:58:00
 
 echo "Daily wake installed. Current schedule:"
 pmset -g sched
