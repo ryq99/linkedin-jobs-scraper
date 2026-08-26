@@ -36,6 +36,7 @@ def test_build_messages_is_single_user_turn_with_description():
 
 
 def test_config_is_populated_from_env():
-    assert config.EXTRACT_MODEL           # loaded from .env.example via conftest
-    assert config.BATCH_SIZE > 0
+    assert config.OLLAMA_MODEL            # loaded from .env.example via conftest
+    assert config.OLLAMA_HOST.startswith("http")
+    assert config.COMMIT_CHUNK > 0
     assert str(config.DB_PATH).endswith("data/jobs.db")

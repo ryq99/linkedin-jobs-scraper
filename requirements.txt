@@ -6,4 +6,5 @@ datasets
 huggingface_hub
 pydantic
 python-dotenv
+ollama
 pytest
