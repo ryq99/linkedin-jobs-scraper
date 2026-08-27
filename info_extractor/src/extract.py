@@ -54,7 +54,12 @@ def extract_one(client: ollama.Client, model: str, job_id: str, description: str
     messages = [{"role": "system", "content": prompt.SYSTEM}]
     messages += prompt.build_messages(description[: config.MAX_DESCRIPTION_CHARS])
     try:
-        resp = client.chat(model=model, messages=messages, format=_FORMAT, options={"temperature": 0})
+        resp = client.chat(
+            model=model,
+            messages=messages,
+            format=_FORMAT,
+            options={"temperature": 0, "num_predict": config.NUM_PREDICT},
+        )
         # The model fills only the pruned fields; add the ones we own, then let
         # JobSkills validate the whole record (enum/type checks included).
         fields = json.loads(resp.message.content)
