@@ -33,6 +33,7 @@ OLLAMA_MODEL = _require("OLLAMA_MODEL")
 
 # Request / run tuning.
 MAX_DESCRIPTION_CHARS = int(_require("EXTRACT_MAX_DESC_CHARS"))    # trim to bound input tokens
+NUM_PREDICT = int(_require("EXTRACT_NUM_PREDICT"))                # cap output tokens (stops runaway lists)
 REQUEST_TIMEOUT = int(_require("EXTRACT_REQUEST_TIMEOUT"))        # per-posting inference cap (s)
 COMMIT_CHUNK = int(_require("EXTRACT_COMMIT_CHUNK"))              # rows written per transaction
 MAX_RUN_SECONDS = int(_require("EXTRACT_MAX_RUN_SECONDS"))         # whole-run wall-clock cap

@@ -28,11 +28,13 @@ def test_system_prompt_lists_every_enum_value():
             assert member.value in prompt.SYSTEM
 
 
-def test_build_messages_is_single_user_turn_with_description():
+def test_build_messages_appends_target_after_fewshot():
     msgs = prompt.build_messages("Senior MLE, must have Python")
-    assert len(msgs) == 1
-    assert msgs[0]["role"] == "user"
-    assert "Senior MLE, must have Python" in msgs[0]["content"]
+    # a few-shot user/assistant pair precedes the real posting (the last turn)
+    assert len(msgs) >= 3
+    assert msgs[0]["role"] == "user" and msgs[1]["role"] == "assistant"
+    assert msgs[-1]["role"] == "user"
+    assert "Senior MLE, must have Python" in msgs[-1]["content"]
 
 
 def test_config_is_populated_from_env():
