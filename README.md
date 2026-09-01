@@ -107,6 +107,7 @@ flowchart TD
 | `job_scraper/scripts/install_daily_trigger.sh` | Install/refresh the launchd job (renders the plist for this checkout) |
 | `job_scraper/scripts/setup_wake_schedule.sh` | One-time `sudo pmset repeat wake` so the Mac wakes for the overnight run |
 | `job_scraper/infra/linkedin-scraper.plist.example` | launchd schedule template (daily 03:00) |
+| `info_extractor/` | Peer component: local-LLM (Ollama) extraction of skills/competencies from each `job_description` into a typed `job_skills` table in the shared DB |
 
 ## Data Model
 
