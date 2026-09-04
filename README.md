@@ -178,3 +178,11 @@ sudo ./job_scraper/scripts/setup_wake_schedule.sh     # pmset wake @ 02:58 so th
 Failed runs save a Playwright trace to `logs/traces/` — inspect with `playwright show-trace <file>`.
 
 **Run tests:** `pytest` — parsers are validated against text fixtures captured from the live site, so LinkedIn layout changes can be fixed by updating a fixture and re-running.
+
+**Extract skills (info_extractor):** free, local, via Ollama — reads `job_description` from the shared DB and fills a typed `job_skills` table.
+
+```bash
+ollama pull qwen2.5:14b                                    # one-time; model set in info_extractor/.env
+cp info_extractor/.env.example info_extractor/.env
+python info_extractor/src/main.py extract --limit 5        # sample; drop --limit for the full backfill (resumable)
+```
