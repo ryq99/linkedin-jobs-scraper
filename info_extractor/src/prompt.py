@@ -27,7 +27,10 @@ empty if the posting doesn't support it. Keep each list to the few most salient 
   inference, NLP, computer vision, recommendations, RAG, agents, foundation models, MLOps.
 - skills: concrete methods/practices/competencies — e.g. distributed training, prototyping,
   CI/CD, model monitoring, feature engineering, A/B testing, data pipelines.
-- programming_languages: languages named — e.g. Python, Scala, Java, C++, Rust, R, SQL.
+- tools: named frameworks / libraries / platforms / infrastructure — e.g. PyTorch, TensorFlow,
+  Spark, AWS, Kubernetes, Docker, Snowflake. Frameworks go HERE, not in skills or languages.
+- programming_languages: programming LANGUAGES only — e.g. Python, Scala, Java, C++, Rust, R,
+  SQL. Not frameworks/libraries (those go in tools).
 - team_or_product_area: the specific team/product named — e.g. "Search & Personalization",
   "Payments ML Accelerator", "Prime Video", "Unity Catalog".
 
@@ -57,6 +60,7 @@ _EXAMPLE_ASSISTANT = json.dumps({
     "business_domain": ["payments", "fraud"],
     "tech_domain": ["fraud detection", "experimentation", "foundation models"],
     "skills": ["deep learning", "A/B testing", "streaming feature pipelines", "production deployment"],
+    "tools": ["Spark"],
     "programming_languages": ["Python", "Scala"],
     "team_or_product_area": ["Payments ML Accelerator"],
     "canonical_title": "Machine Learning Engineer",

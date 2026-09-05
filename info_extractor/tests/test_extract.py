@@ -19,7 +19,7 @@ class _FakeClient:
 
 _VALID = '{"canonical_title": "ML Engineer", "seniority": "senior", ' \
          '"years_experience_min": 5, "tech_domain": ["NLP"], "skills": ["distributed training"], ' \
-         '"programming_languages": ["Python"], "industry": ["tech"], "business_domain": ["search"], ' \
+         '"tools": ["PyTorch"], "programming_languages": ["Python"], "industry": ["tech"], "business_domain": ["search"], ' \
          '"team_or_product_area": ["Search"], "education_level": "Masters"}'
 
 

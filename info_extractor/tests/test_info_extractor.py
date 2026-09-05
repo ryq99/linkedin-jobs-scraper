@@ -38,7 +38,7 @@ def test_system_prompt_lists_stable_enum_values():
 
 
 def test_system_prompt_names_open_dims():
-    for field in ("industry", "business_domain", "tech_domain", "skills",
+    for field in ("industry", "business_domain", "tech_domain", "skills", "tools",
                   "programming_languages", "team_or_product_area"):
         assert field in prompt.SYSTEM
 
