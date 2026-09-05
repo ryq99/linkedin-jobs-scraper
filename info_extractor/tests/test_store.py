@@ -11,20 +11,20 @@ from schema import SCHEMA_VERSION, JobSkills
 # Minimal stand-in for the scraper's `jobs` table — only the columns store.py
 # reads. (id, description, expected-to-be-a-candidate)
 _SEED_JOBS = [
-    ("1", "Senior MLE, must have Python", True),
-    ("2", "Data Scientist, SQL and stats", True),
-    ("3", None, False),   # no description -> never a candidate
-    ("4", "", False),     # empty description -> never a candidate
+    ("1", "Senior MLE, must have Python", "2026-01-01", True),
+    ("2", "Data Scientist, SQL and stats", "2026-06-01", True),
+    ("3", None, "2026-06-01", False),   # no description -> never a candidate
+    ("4", "", "2026-06-01", False),     # empty description -> never a candidate
 ]
 
 
 @pytest.fixture
 def conn() -> sqlite3.Connection:
     c = sqlite3.connect(":memory:")
-    c.execute("CREATE TABLE jobs (job_id TEXT PRIMARY KEY, job_description TEXT)")
+    c.execute("CREATE TABLE jobs (job_id TEXT PRIMARY KEY, job_description TEXT, first_seen TEXT)")
     c.executemany(
-        "INSERT INTO jobs (job_id, job_description) VALUES (?, ?)",
-        [(jid, desc) for jid, desc, _ in _SEED_JOBS],
+        "INSERT INTO jobs (job_id, job_description, first_seen) VALUES (?, ?, ?)",
+        [(jid, desc, fs) for jid, desc, fs, _ in _SEED_JOBS],
     )
     c.commit()
     c.execute(store._CREATE_JOB_SKILLS)  # same table store.connect() would create
@@ -58,6 +58,15 @@ def test_candidates_excludes_current_schema_and_includes_stale(conn):
 
 def test_candidates_limit_caps_count(conn):
     assert len(store.candidates(conn, limit=1)) == 1
+
+
+def test_candidates_recent_first_order(conn):
+    # job 2 (2026-06-01) is newer than job 1 (2026-01-01) -> comes first
+    assert [jid for jid, _ in store.candidates(conn)] == ["2", "1"]
+
+
+def test_candidates_since_filters_by_first_seen(conn):
+    assert _ids(store.candidates(conn, since="2026-03-01")) == {"2"}  # excludes job 1 (Jan)
 
 
 def test_write_skills_roundtrip_serializes_enums_and_lists(conn):

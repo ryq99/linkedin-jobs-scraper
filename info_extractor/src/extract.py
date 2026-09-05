@@ -74,11 +74,11 @@ def extract_one(client: ollama.Client, model: str, job_id: str, description: str
         return None
 
 
-def run(conn, limit: int | None = None, model: str | None = None) -> int:
-    """Extract all candidate postings; bulk-write every COMMIT_CHUNK. Returns count."""
+def run(conn, limit: int | None = None, model: str | None = None, since: str | None = None) -> int:
+    """Extract candidate postings (newest first); bulk-write every COMMIT_CHUNK. Returns count."""
     model = model or config.OLLAMA_MODEL
-    rows = store.candidates(conn, limit=limit)
-    log.info("Extract | model=%s | %d postings to process", model, len(rows))
+    rows = store.candidates(conn, limit=limit, since=since)
+    log.info("Extract | model=%s | since=%s | %d postings to process", model, since or "all", len(rows))
 
     client = make_client()
     deadline = time.monotonic() + config.MAX_RUN_SECONDS

@@ -49,12 +49,15 @@ _INSERT_SKILLS = (
 )
 
 # Postings needing extraction: have a description, and either no job_skills row
-# or one written under an older schema. LIMIT -1 means unbounded.
+# or one written under an older schema. Optional `since` bounds to recent
+# postings; recent-first order (first_seen DESC) so partial progress always
+# covers the most relevant data. LIMIT -1 means unbounded.
 _CANDIDATES = """SELECT j.job_id, j.job_description
 FROM jobs j LEFT JOIN job_skills s ON s.job_id = j.job_id
 WHERE j.job_description IS NOT NULL AND j.job_description != ''
+  AND (:since IS NULL OR j.first_seen >= :since)
   AND (s.job_id IS NULL OR s.schema_version < :schema_version)
-ORDER BY j.job_id LIMIT :limit"""
+ORDER BY j.first_seen DESC LIMIT :limit"""
 
 
 def connect(db_path: str | Path) -> sqlite3.Connection:
@@ -72,9 +75,11 @@ def connect(db_path: str | Path) -> sqlite3.Connection:
     return conn
 
 
-def candidates(conn: sqlite3.Connection, limit: int | None = None) -> list[tuple[str, str]]:
-    """(job_id, job_description) for postings not yet extracted at this schema."""
-    params = {"schema_version": SCHEMA_VERSION, "limit": -1 if limit is None else limit}
+def candidates(conn: sqlite3.Connection, limit: int | None = None,
+               since: str | None = None) -> list[tuple[str, str]]:
+    """(job_id, job_description) for postings not yet extracted at this schema,
+    newest first. `since` (YYYY-MM-DD) bounds to postings first seen on/after it."""
+    params = {"schema_version": SCHEMA_VERSION, "since": since, "limit": -1 if limit is None else limit}
     return conn.execute(_CANDIDATES, params).fetchall()
 
 
