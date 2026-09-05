@@ -30,7 +30,6 @@ empty if the posting doesn't support it. Keep each list to the few most salient 
 - programming_languages: languages named — e.g. Python, Scala, Java, C++, Rust, R, SQL.
 - team_or_product_area: the specific team/product named — e.g. "Search & Personalization",
   "Payments ML Accelerator", "Prime Video", "Unity Catalog".
-- role_type: the role's function(s) — e.g. DS, MLE, Research, MLOps, PM, SWE, Analyst.
 
 For the STABLE fields, choose exactly one value:
 - canonical_title: a short normalized title (e.g. "Machine Learning Engineer"); strip
@@ -60,7 +59,6 @@ _EXAMPLE_ASSISTANT = json.dumps({
     "skills": ["deep learning", "A/B testing", "streaming feature pipelines", "production deployment"],
     "programming_languages": ["Python", "Scala"],
     "team_or_product_area": ["Payments ML Accelerator"],
-    "role_type": ["MLE"],
     "canonical_title": "Machine Learning Engineer",
     "seniority": "senior",
     "years_experience_min": 7,

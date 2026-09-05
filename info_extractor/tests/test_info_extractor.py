@@ -14,7 +14,6 @@ def test_jobskills_accepts_valid_record():
         tech_domain=["NLP", "RAG"],
         skills=["distributed training"],
         programming_languages=["Python"],
-        role_type=["MLE"],
         seniority="senior",
         education_level="Masters",
     )
@@ -40,7 +39,7 @@ def test_system_prompt_lists_stable_enum_values():
 
 def test_system_prompt_names_open_dims():
     for field in ("industry", "business_domain", "tech_domain", "skills",
-                  "programming_languages", "team_or_product_area", "role_type"):
+                  "programming_languages", "team_or_product_area"):
         assert field in prompt.SYSTEM
 
 
