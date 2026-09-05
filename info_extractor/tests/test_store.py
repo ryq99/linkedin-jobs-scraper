@@ -61,15 +61,15 @@ def test_candidates_limit_caps_count(conn):
 
 
 def test_write_skills_roundtrip_serializes_enums_and_lists(conn):
-    record = JobSkills(job_id="1", role_family="MLE", modeling_area=["NLP", "RAG"], must_have_skills=["Python"])
+    record = JobSkills(job_id="1", seniority="senior", tech_domain=["NLP", "RAG"], skills=["Python"])
     assert store.write_skills(conn, [record]) == 1
 
-    role_family, modeling_area, must_have = conn.execute(
-        "SELECT role_family, modeling_area, must_have_skills FROM job_skills WHERE job_id='1'"
+    seniority, tech_domain, skills = conn.execute(
+        "SELECT seniority, tech_domain, skills FROM job_skills WHERE job_id='1'"
     ).fetchone()
-    assert role_family == "MLE"                       # enum -> plain string
-    assert json.loads(modeling_area) == ["NLP", "RAG"]  # list -> JSON text
-    assert json.loads(must_have) == ["Python"]
+    assert seniority == "senior"                       # enum -> plain string
+    assert json.loads(tech_domain) == ["NLP", "RAG"]   # list -> JSON text
+    assert json.loads(skills) == ["Python"]
 
 
 def test_write_skills_overwrites_by_job_id(conn):
