@@ -22,7 +22,7 @@ def cmd_extract(args) -> int:
     model = args.model or config.OLLAMA_MODEL
 
     if args.dry_run:
-        rows = store.candidates(conn, limit=args.limit)
+        rows = store.candidates(conn, limit=args.limit, since=args.since)
         print(f"model         : {model}")
         print(f"candidates    : {len(rows)} postings need extraction")
         if rows:
@@ -34,7 +34,7 @@ def cmd_extract(args) -> int:
                 print(f"[{m['role']}]\n{m['content'][:600]}\n")
         return 0
 
-    extract.run(conn, limit=args.limit, model=args.model)
+    extract.run(conn, limit=args.limit, model=args.model, since=args.since)
     return 0
 
 
@@ -43,6 +43,7 @@ def parse_args(argv=None):
     sub = p.add_subparsers(dest="command", required=True)
     ex = sub.add_parser("extract", help="Extract JobSkills from postings needing it")
     ex.add_argument("--limit", type=int, default=None, help="Max postings this run (default: all)")
+    ex.add_argument("--since", default=None, help="Only postings first seen on/after YYYY-MM-DD (newest first)")
     ex.add_argument("--model", default=None, help="Override OLLAMA_MODEL for this run")
     ex.add_argument("--dry-run", action="store_true", help="Show candidate count + one rendered request; no inference")
     return p.parse_args(argv)
