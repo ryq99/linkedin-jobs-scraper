@@ -74,3 +74,31 @@ def test_field_completeness(tmp_path):
     comp = store.field_completeness(conn, "2026-07-18")
     assert comp["job_id"] == 1.0
     assert comp["job_title"] == 0.5
+
+
+def test_outbox_dates(tmp_path):
+    conn = store.connect(tmp_path / "t.db")
+    store.upsert_job(conn, make_job("a", ts="2026-07-18-05-00"))
+    store.upsert_job(conn, make_job("b", ts="2026-07-19-05-00"))
+    assert store.export_dates(conn) == ["2026-07-18", "2026-07-19"]
+    # nothing exported yet -> both need export
+    assert store.dates_needing_export(conn, "2026-07-20") == ["2026-07-18", "2026-07-19"]
+    store.mark_exported(conn, "2026-07-18", 1)
+    assert store.dates_needing_export(conn, "2026-07-20") == ["2026-07-19"]
+    # today is always re-included even once recorded (still accumulating)
+    store.mark_exported(conn, "2026-07-19", 1)
+    assert store.dates_needing_export(conn, "2026-07-19") == ["2026-07-19"]
+    assert store.dates_needing_export(conn, "2099-01-01") == []
+
+
+def test_export_dates_to_s3_writes_and_marks(tmp_path, monkeypatch):
+    import export
+    conn = store.connect(tmp_path / "t.db")
+    store.upsert_job(conn, make_job("a", ts="2026-07-18-05-00"))
+    store.upsert_job(conn, make_job("b", ts="2026-07-19-05-00"))
+    calls = []
+    monkeypatch.setattr(export, "save_results", lambda df, date: calls.append((date, len(df))))
+    n = export.export_dates_to_s3(conn, ["2026-07-18", "2026-07-19"])
+    assert n == 2
+    assert calls == [("2026-07-18", 1), ("2026-07-19", 1)]
+    assert store.dates_needing_export(conn, "2099-01-01") == []  # both recorded now

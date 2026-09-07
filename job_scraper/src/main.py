@@ -153,18 +153,31 @@ def cmd_scrape(args) -> int:
     if args.no_export:
         log.info("Export skipped (--no-export)")
     else:
-        export.export_snapshot(df, ts)
+        export.require_export_config()
+        # S3: export today + self-heal any date a prior failed run left un-exported.
+        n = export.export_dates_to_s3(conn, store.dates_needing_export(conn, day))
+        log.info("S3: exported %d rows across un-exported dates", n)
+        if not df.empty:  # HF: per-run split of today's new rows (unchanged)
+            export.save_to_hf(df, ts)
     log.info("Done: %d rows first seen on %s", len(df), day)
     return EXIT_OK
 
 def cmd_export(args) -> int:
     conn = store.connect(config.DB_PATH)
+    if args.rebuild:
+        dates = store.export_dates(conn)
+        n = export.export_dates_to_s3(conn, dates)
+        log.info("Rebuild: exported %d rows across %d date files", n, len(dates))
+        removed = export.delete_legacy_timestamp_files()
+        log.info("Rebuild: removed %d legacy timestamp files", removed)
+        return EXIT_OK
     day = args.date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
     df = store.rows_first_seen(conn, day)
     if df.empty:
         log.warning("No rows first seen on %s", day)
         return EXIT_NO_CARDS
-    export.export_snapshot(df, df["scrape_dt"].iloc[-1])
+    export.save_results(df, day)
+    store.mark_exported(conn, day, len(df))
     return EXIT_OK
 
 def cmd_stats() -> int:
@@ -188,8 +201,10 @@ def parse_args(argv=None):
     sc.add_argument("--headed", action="store_true", help="Visible browser (watch the scrape live)")
     sc.add_argument("--no-export", action="store_true", help="Skip S3/HF export (local dry run)")
 
-    ex = sub.add_parser("export", help="Re-export a day's new jobs to S3 + HF")
+    ex = sub.add_parser("export", help="Re-export to S3 date files (--rebuild rebuilds all + cleans legacy)")
     ex.add_argument("--date", default=None, help="YYYY-MM-DD (default: today UTC)")
+    ex.add_argument("--rebuild", action="store_true",
+                    help="Rebuild every date file from local + delete legacy timestamp files")
 
     sub.add_parser("stats", help="Show store statistics")
     return p.parse_args(argv)
