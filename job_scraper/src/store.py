@@ -37,6 +37,13 @@ _CREATE_RUNS = """CREATE TABLE IF NOT EXISTS runs (
 )
 """
 
+# Tracks which calendar dates' S3 date-file has been uploaded — the outbox that
+# lets a successful run self-heal any date a failed run left un-exported.
+_CREATE_S3_EXPORTS = """CREATE TABLE IF NOT EXISTS s3_exports (
+    export_date TEXT PRIMARY KEY, job_count INTEGER, uploaded_at TEXT
+)
+"""
+
 _UPSERT_JOB = f"""INSERT INTO jobs ({", ".join(JOB_FIELDS)}, first_seen, last_seen, times_seen)
 VALUES ({", ".join(f":{f}" for f in JOB_FIELDS)}, :scrape_dt, :scrape_dt, 1)
 ON CONFLICT(job_id) DO UPDATE SET
@@ -52,6 +59,7 @@ def connect(db_path: Path) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute(_CREATE_JOBS)
     conn.execute(_CREATE_RUNS)
+    conn.execute(_CREATE_S3_EXPORTS)
     conn.commit()
     return conn
 
@@ -81,6 +89,30 @@ def record_run(conn, started_at, finished_at, queries, jobs_seen, jobs_new, stat
 def rows_first_seen(conn: sqlite3.Connection, date_prefix: str) -> pd.DataFrame:
     """All jobs first seen on a given day ('YYYY-MM-DD'), for export."""
     return pd.read_sql_query("SELECT * FROM jobs WHERE first_seen LIKE ?", conn, params=(f"{date_prefix}%",))
+
+def export_dates(conn: sqlite3.Connection) -> list[str]:
+    """Every calendar date (YYYY-MM-DD) that has jobs, oldest first."""
+    return [r[0] for r in conn.execute(
+        "SELECT DISTINCT substr(first_seen, 1, 10) d FROM jobs ORDER BY d")]
+
+def dates_needing_export(conn: sqlite3.Connection, today: str) -> list[str]:
+    """Dates whose S3 file isn't recorded yet, plus `today` (still accumulating).
+    This is the self-heal set: a date a failed run skipped stays un-recorded and
+    gets picked up on the next successful run."""
+    rows = conn.execute(
+        "SELECT DISTINCT substr(first_seen, 1, 10) d FROM jobs "
+        "WHERE substr(first_seen, 1, 10) NOT IN (SELECT export_date FROM s3_exports) "
+        "   OR substr(first_seen, 1, 10) = ? ORDER BY d",
+        (today,))
+    return [r[0] for r in rows]
+
+def mark_exported(conn: sqlite3.Connection, export_date: str, job_count: int) -> None:
+    """Record that `export_date`'s S3 file was uploaded (idempotent upsert)."""
+    conn.execute(
+        "INSERT INTO s3_exports (export_date, job_count, uploaded_at) VALUES (?, ?, datetime('now')) "
+        "ON CONFLICT(export_date) DO UPDATE SET job_count = excluded.job_count, uploaded_at = excluded.uploaded_at",
+        (export_date, job_count))
+    conn.commit()
 
 def stats(conn: sqlite3.Connection) -> dict:
     return {
