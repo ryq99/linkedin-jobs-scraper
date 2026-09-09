@@ -11,7 +11,16 @@ import sqlite3
 import typing
 from pathlib import Path
 
+import pandas as pd
+
 from schema import JOBSKILLS_FIELDS, SCHEMA_VERSION, JobSkills
+
+# Tracks which posting-date's job_skills S3 file was uploaded, with the row count
+# so a date re-exports when more of that day's backlog gets extracted later.
+_CREATE_S3_EXPORTS = """CREATE TABLE IF NOT EXISTS job_skills_s3_exports (
+    export_date TEXT PRIMARY KEY, job_count INTEGER, uploaded_at TEXT
+)
+"""
 
 # Wait out the scraper's writes on the shared file instead of erroring — an
 # operational knob peer to the WAL pragma, not a tunable business setting.
@@ -71,6 +80,7 @@ def connect(db_path: str | Path) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute(f"PRAGMA busy_timeout={_BUSY_TIMEOUT_MS}")
     conn.execute(_CREATE_JOB_SKILLS)
+    conn.execute(_CREATE_S3_EXPORTS)
     conn.commit()
     return conn
 
@@ -81,6 +91,40 @@ def candidates(conn: sqlite3.Connection, limit: int | None = None,
     newest first. `since` (YYYY-MM-DD) bounds to postings first seen on/after it."""
     params = {"schema_version": SCHEMA_VERSION, "since": since, "limit": -1 if limit is None else limit}
     return conn.execute(_CANDIDATES, params).fetchall()
+
+
+def export_dates(conn: sqlite3.Connection) -> list[str]:
+    """Every posting-date that has at least one job_skills row, oldest first."""
+    return [r[0] for r in conn.execute(
+        "SELECT DISTINCT substr(j.first_seen, 1, 10) d FROM job_skills s "
+        "JOIN jobs j ON j.job_id = s.job_id ORDER BY d")]
+
+def dates_needing_export(conn: sqlite3.Connection) -> list[str]:
+    """Posting-dates whose current job_skills count differs from what was last
+    exported (or was never exported). Count-based because a date's job_skills set
+    grows as more of that day's backlog is extracted across runs."""
+    rows = conn.execute(
+        "SELECT cur.d FROM ("
+        "  SELECT substr(j.first_seen, 1, 10) d, COUNT(*) c"
+        "  FROM job_skills s JOIN jobs j ON j.job_id = s.job_id GROUP BY d"
+        ") cur LEFT JOIN job_skills_s3_exports e ON e.export_date = cur.d "
+        "WHERE e.job_count IS NULL OR e.job_count != cur.c ORDER BY cur.d")
+    return [r[0] for r in rows]
+
+def job_skills_for_date(conn: sqlite3.Connection, date: str) -> pd.DataFrame:
+    """All job_skills rows for postings first-seen on `date` (YYYY-MM-DD)."""
+    return pd.read_sql_query(
+        "SELECT s.* FROM job_skills s JOIN jobs j ON j.job_id = s.job_id "
+        "WHERE substr(j.first_seen, 1, 10) = ?", conn, params=(date,))
+
+def mark_exported(conn: sqlite3.Connection, export_date: str, job_count: int) -> None:
+    """Record that `export_date`'s job_skills S3 file was uploaded (idempotent)."""
+    conn.execute(
+        "INSERT INTO job_skills_s3_exports (export_date, job_count, uploaded_at) "
+        "VALUES (?, ?, datetime('now')) ON CONFLICT(export_date) DO UPDATE SET "
+        "job_count = excluded.job_count, uploaded_at = excluded.uploaded_at",
+        (export_date, job_count))
+    conn.commit()
 
 
 def write_skills(conn: sqlite3.Connection, records: typing.Iterable[JobSkills]) -> int:

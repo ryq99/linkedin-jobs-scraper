@@ -27,6 +27,9 @@ def _require(name: str) -> str:
 # dir (absolute paths in .env also work).
 DB_PATH = (_COMPONENT_DIR / _require("DB_PATH")).resolve()
 
+# S3 destination for job_skills date-files (AWS creds from ~/.aws).
+S3_PREFIX = _require("S3_PREFIX")
+
 # Local LLM (Ollama) — free, private, no API key.
 OLLAMA_HOST = _require("OLLAMA_HOST")
 OLLAMA_MODEL = _require("OLLAMA_MODEL")

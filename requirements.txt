@@ -7,4 +7,6 @@ huggingface_hub
 pydantic
 python-dotenv
 ollama
+boto3
+awswrangler
 pytest
