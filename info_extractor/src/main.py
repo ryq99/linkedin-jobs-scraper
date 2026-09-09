@@ -9,6 +9,7 @@ import argparse
 import logging
 
 import config
+import export
 import extract
 import prompt
 import store
@@ -35,6 +36,17 @@ def cmd_extract(args) -> int:
         return 0
 
     extract.run(conn, limit=args.limit, model=args.model, since=args.since)
+    if not args.no_export:  # publish any date whose job_skills changed (self-heal)
+        n = export.export_dates_to_s3(conn, store.dates_needing_export(conn))
+        log.info("S3: exported %d job_skills rows across changed dates", n)
+    return 0
+
+
+def cmd_export(args) -> int:
+    conn = store.connect(config.DB_PATH)
+    dates = store.export_dates(conn) if args.rebuild else store.dates_needing_export(conn)
+    n = export.export_dates_to_s3(conn, dates)
+    log.info("Exported %d job_skills rows across %d date files", n, len(dates))
     return 0
 
 
@@ -46,11 +58,17 @@ def parse_args(argv=None):
     ex.add_argument("--since", default=None, help="Only postings first seen on/after YYYY-MM-DD (newest first)")
     ex.add_argument("--model", default=None, help="Override OLLAMA_MODEL for this run")
     ex.add_argument("--dry-run", action="store_true", help="Show candidate count + one rendered request; no inference")
+    ex.add_argument("--no-export", action="store_true", help="Skip the S3 publish after extraction")
+
+    xp = sub.add_parser("export", help="Publish job_skills date-files to S3 (changed dates; --rebuild for all)")
+    xp.add_argument("--rebuild", action="store_true", help="Export every date file, not just changed ones")
     return p.parse_args(argv)
 
 
 def main(argv=None) -> int:
     args = parse_args(argv)
+    if args.command == "export":
+        return cmd_export(args)
     return cmd_extract(args)
 
 
