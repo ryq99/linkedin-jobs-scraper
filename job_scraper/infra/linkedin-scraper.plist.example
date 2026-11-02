@@ -4,12 +4,16 @@
 <!--
   launchd schedule for the LinkedIn scraper.
 
-  IMPORTANT — launchd does NOT wake a sleeping Mac. StartCalendarInterval only
-  runs the job when the machine is already awake (or on its next wake). To wake
-  the Mac for the overnight run, install the daily wake ONCE:
+  Fires at several times/day (03:00 primary off-peak + daytime catch-ups). The
+  --skip-if-recent guard in run_daily.sh makes this idempotent: only the first
+  success each day does work; the rest no-op. This is what makes the pipeline run
+  daily even when the overnight wake is suppressed (lid-closed on battery goes
+  into standby and macOS skips the scheduled wake) — some fire-time will land
+  while the Mac is awake during normal use.
+
+  For the overnight 03:00 run to fire while asleep, also install the daily wake
+  ONCE (works reliably on AC power):
     sudo ./scripts/setup_wake_schedule.sh      # pmset repeat wake @ 02:58
-  The wrapper then runs the scrape under `caffeinate` (stays awake through the
-  upload) and, because of the --sleep-after arg below, sleeps the Mac when done.
 
   Install: don't copy this by hand — run the installer, which renders the two
   /path/to/ds_jobs paths and the Label for this checkout, then (re)loads it:
@@ -21,24 +25,25 @@
     <key>Label</key>
     <string>com.user.linkedin-scraper</string>
 
+    <!-- No --sleep-after: daytime catch-up runs must not sleep an active Mac;
+         after a run, normal idle-sleep takes over. -->
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
         <string>/path/to/ds_jobs/scripts/run_daily.sh</string>
-        <string>--sleep-after</string>
+        <string>--skip-if-recent</string>
     </array>
 
-    <!-- Fire daily at 3:00 am (off-peak — LinkedIn throttles the evening window).
-         The Mac is woken at 02:58 by the pmset repeat wake from
-         setup_wake_schedule.sh (run that once); this only sets when launchd runs
-         the job, it does not wake the machine on its own. -->
+    <!-- Several fire-times/day; the --skip-if-recent guard keeps it to one run.
+         03:00 is the off-peak primary (needs the pmset wake on battery); the
+         daytime times catch up whenever the Mac is awake. -->
     <key>StartCalendarInterval</key>
-    <dict>
-        <key>Hour</key>
-        <integer>3</integer>
-        <key>Minute</key>
-        <integer>0</integer>
-    </dict>
+    <array>
+        <dict><key>Hour</key><integer>3</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Hour</key><integer>10</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Hour</key><integer>15</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Hour</key><integer>20</integer><key>Minute</key><integer>0</integer></dict>
+    </array>
 
     <key>ProcessType</key>
     <string>Background</string>

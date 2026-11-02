@@ -106,7 +106,7 @@ flowchart TD
 | `job_scraper/scripts/run_daily.sh` | Run wrapper: `caffeinate` during the scrape + optional `--sleep-after` |
 | `job_scraper/scripts/install_daily_trigger.sh` | Install/refresh the launchd job (renders the plist for this checkout) |
 | `job_scraper/scripts/setup_wake_schedule.sh` | One-time `sudo pmset repeat wake` so the Mac wakes for the overnight run |
-| `job_scraper/infra/linkedin-scraper.plist.example` | launchd schedule template (daily 03:00) |
+| `job_scraper/infra/linkedin-scraper.plist.example` | launchd schedule template (multiple fire-times/day + `--skip-if-recent` guard) |
 | `info_extractor/` | Peer component: local-LLM (Ollama) extraction of skills/competencies from each `job_description` into a typed `job_skills` table in the shared DB |
 
 ## Data Model
@@ -172,7 +172,7 @@ sudo ./job_scraper/scripts/setup_wake_schedule.sh     # pmset wake @ 02:58 so th
 ```
 
 - **Wake** — `setup_wake_schedule.sh` installs `pmset repeat wake` at 02:58 (undo with `sudo pmset repeat cancel`, inspect with `pmset -g sched`). **Without this, the job only runs if the Mac is already awake at 03:00; a sleeping Mac won't wake, and a shut-down Mac won't power on.**
-- **Run** — `install_daily_trigger.sh` renders the plist for this checkout, replaces any older copy, and loads it; launchd fires `run_daily.sh --sleep-after` at 03:00 → `logs/scrape.log`.
+- **Run** — `install_daily_trigger.sh` renders the plist for this checkout, replaces any older copy, and loads it; launchd fires `run_daily.sh --skip-if-recent` at **several times/day** (03:00 off-peak + 10:00/15:00/20:00 catch-ups) → `logs/scrape.log`. The `--skip-if-recent` guard makes it idempotent: only the first success each day does work, the rest no-op. This is what keeps it running daily even if the overnight wake is suppressed (lid-closed on battery enters standby and macOS skips the scheduled wake) — some fire-time lands while the Mac is awake during normal use.
 - **Stay awake, then sleep** — the wrapper runs the scrape under `caffeinate` so idle sleep can't kill it mid-run, then `--sleep-after` returns the Mac to sleep once the upload finishes (manual runs omit the flag, so they never sleep your machine).
 
 Failed runs save a Playwright trace to `logs/traces/` — inspect with `playwright show-trace <file>`.
