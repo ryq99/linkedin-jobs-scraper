@@ -23,6 +23,7 @@ log = logging.getLogger("main")
 EXIT_OK = 0
 EXIT_NO_CARDS = 1        # selector breakage / empty search — investigate
 EXIT_NOT_LOGGED_IN = 2   # session expired — run `python src/main.py login`
+EXIT_DETAIL_BROKEN = 3   # harvested new jobs but 0 detail extractions — DOM churn
 
 def notify(message: str) -> None:
     """Best-effort macOS notification (visible next morning after a cron run)."""
@@ -88,21 +89,27 @@ def build_job(job_id: str, card: dict, sections: dict, run_dt: datetime, ts: str
     return Job(**{k: v for k, v in fields.items() if k in Job.__dataclass_fields__})
 
 def scrape_details(page, conn, cards: dict[str, dict], new_ids: list[str], run_dt: datetime, ts: str,
-                   deadline: watchdog.Deadline) -> None:
-    """Phase B: visit each new job's page. Commit per job, so a crash resumes."""
+                   deadline: watchdog.Deadline) -> tuple[int, int]:
+    """Phase B: visit each new job's page. Commit per job, so a crash resumes.
+    Returns (ok, failed) so the caller can trip on a total-failure DOM break."""
     todo = new_ids[: config.MAX_DETAIL_VISITS]
+    ok = failed = 0
     for i, job_id in enumerate(todo, 1):
         deadline.check(f"details {i}/{len(todo)}")
+        done = False
         for attempt in (1, 2):
             try:
                 sections = crawler.extract_sections(page, job_id)  # hard-capped per visit
                 store.upsert_job(conn, build_job(job_id, cards[job_id], sections, run_dt, ts))
+                done = True
                 break
             except Exception as e:
                 log.warning("Job %s attempt %d failed: %s", job_id, attempt, e)
+        ok, failed = ok + done, failed + (not done)
         if i % 25 == 0:
-            log.info("Details: %d/%d", i, len(todo))
+            log.info("Details: %d/%d (ok=%d failed=%d)", i, len(todo), ok, failed)
         time.sleep(random.uniform(*config.DETAIL_DELAY_RANGE))
+    return ok, failed
 
 def cmd_scrape(args) -> int:
     run_dt = datetime.now(timezone.utc)
@@ -113,7 +120,7 @@ def cmd_scrape(args) -> int:
 
     pw, context, page = browser.launch(headless=not args.headed)
     deadline = watchdog.Deadline(config.MAX_RUN_SECONDS)
-    status, cards, new_ids = "failed", {}, []
+    status, cards, new_ids, detail_broken = "failed", {}, [], False
     try:
         browser.start_trace(context)
         if not browser.ensure_logged_in(page):
@@ -129,8 +136,16 @@ def cmd_scrape(args) -> int:
         new_ids = [jid for jid in cards if jid not in known]
         store.touch_last_seen(conn, [jid for jid in cards if jid in known], ts)
         log.info("Harvested %d cards: %d new, %d already known", len(cards), len(new_ids), len(cards) - len(new_ids))
-        scrape_details(page, conn, cards, new_ids, run_dt, ts, deadline)
-        status = "ok"
+        ok, failed = scrape_details(page, conn, cards, new_ids, run_dt, ts, deadline)
+        if failed and ok == 0:
+            # Harvest worked but every detail visit failed → detail-page DOM churn.
+            # Make it LOUD (non-zero exit + trace + notification) instead of a silent
+            # ok-with-no-new-records run.
+            log.error("All %d detail visits failed — detail-page selectors likely broke", failed)
+            notify(f"Scrape BROKEN: 0/{failed} detail extractions — check crawler selectors")
+            detail_broken = True
+        else:
+            status = "ok"
     except watchdog.RunAborted as e:
         # Wall-clock backstop tripped (wedged/slow browser). Fail fast: the
         # finally below still records the run + trace, and per-job commits mean
@@ -157,10 +172,19 @@ def cmd_scrape(args) -> int:
         # S3: export today + self-heal any date a prior failed run left un-exported.
         n = export.export_dates_to_s3(conn, store.dates_needing_export(conn, day))
         log.info("S3: exported %d rows across un-exported dates", n)
-        if not df.empty:  # HF: per-run split of today's new rows (unchanged)
-            export.save_to_hf(df, ts)
+        if not df.empty:  # HF: per-run split of today's new rows, retried past network flakes
+            for attempt in (1, 2, 3):
+                try:
+                    export.save_to_hf(df, ts)
+                    break
+                except Exception as e:
+                    log.warning("HF push attempt %d failed: %s", attempt, e)
+                    if attempt == 3:
+                        log.error("HF push failed after 3 attempts — S3 export still succeeded")
+                    else:
+                        time.sleep(10 * attempt)
     log.info("Done: %d rows first seen on %s", len(df), day)
-    return EXIT_OK
+    return EXIT_DETAIL_BROKEN if detail_broken else EXIT_OK
 
 def cmd_export(args) -> int:
     conn = store.connect(config.DB_PATH)
