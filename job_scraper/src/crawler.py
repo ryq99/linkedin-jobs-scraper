@@ -49,17 +49,36 @@ _SCROLL_LIST_JS = """
 }
 """
 
-# One DOM pass: all detail sections by componentkey prefix, plus the header
-# block above "About the job" (title/company/meta/chips) as top_card.
+# One DOM pass: sibling sections by (still-stable) componentkey prefix, plus the
+# header block above "About the job" as top_card. LinkedIn removed the named
+# `JobDetails_AboutTheJob_` anchor in a 2026 DOM change, so the About-the-job
+# section is derived from the visible "About the job" heading in main text
+# (churn-resistant), trimmed at the next section heading so it doesn't swallow
+# About-the-company etc.
 _COLLECT_SECTIONS_JS = """
 (prefixes) => {
   const out = {};
   for (const [name, prefix] of Object.entries(prefixes)) {
+    if (name === 'about_job') continue;  // no named anchor anymore; derived below
     const el = document.querySelector(`[componentkey^="${prefix}"]`);
     out[name] = el ? el.innerText : null;
   }
   const main = document.querySelector('main') || document.body;
-  out.top_card = main.innerText.split('About the job')[0].slice(0, 1500);
+  const text = main.innerText;
+  const i = text.indexOf('About the job');
+  out.top_card = (i >= 0 ? text.slice(0, i) : text).slice(0, 1500);
+  if (i >= 0) {
+    let body = text.slice(i);
+    for (const marker of ['About the company', 'People you can reach out to',
+                          'Similar jobs', 'More jobs you may be interested in',
+                          'Jobs related to']) {
+      const j = body.indexOf(marker, 'About the job'.length);
+      if (j > 0) body = body.slice(0, j);
+    }
+    out.about_job = body.trim();
+  } else {
+    out.about_job = null;
+  }
   return out;
 }
 """
@@ -136,7 +155,11 @@ def extract_sections(page: Page, job_id: str) -> dict:
     """
     with time_limit(config.DETAIL_VISIT_TIMEOUT, f"detail visit {job_id}"):
         _goto(page, job_url(job_id))
-        page.wait_for_selector(f'[componentkey^="{SECTION_PREFIXES["about_job"]}"]', timeout=15_000)
+        # Readiness keyed on visible content ("About the job" heading), not an
+        # internal componentkey — survives the DOM churn that broke the old anchor.
+        page.wait_for_function(
+            "() => (document.querySelector('main')?.innerText || '').includes('About the job')",
+            timeout=15_000)
         for _ in range(4):  # progressive scroll triggers lazy sections (AboutTheCompany, insights)
             page.mouse.wheel(0, 1_500)
             page.wait_for_timeout(400)
