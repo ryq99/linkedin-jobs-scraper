@@ -66,12 +66,15 @@ if [[ -f "$ENV_FILE" ]]; then
 fi
 
 cd "$PROJECT_DIR"
-# `caffeinate -i` holds an idle-sleep assertion for the lifetime of the scrape
-# (released automatically when python exits) — this is what stops the Mac from
-# sleeping mid-run and killing the browser subprocess.
+# `caffeinate -is` holds idle- AND system-sleep assertions for the scrape's
+# lifetime (released when python exits): -i stops idle sleep (battery + AC); -s
+# stops system/lid-close sleep but only on AC — macOS forces clamshell sleep on
+# battery regardless, so overnight runs still need the laptop plugged in. Without
+# -s, closing the lid mid-run suspended the scrape (ballooned wall-clock, no
+# clean finish).
 # `|| EXIT_CODE=$?` keeps set -e from aborting before the footer logs on failure.
 EXIT_CODE=0
-caffeinate -i python3 src/main.py scrape ${ARGS[@]+"${ARGS[@]}"} || EXIT_CODE=$?
+caffeinate -is python3 src/main.py scrape ${ARGS[@]+"${ARGS[@]}"} || EXIT_CODE=$?
 
 echo "===== Scraper finished at $(date -u '+%Y-%m-%d %H:%M:%S UTC') (exit $EXIT_CODE) ====="
 
