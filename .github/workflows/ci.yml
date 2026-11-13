@@ -23,3 +23,5 @@ jobs:
         working-directory: job_scraper
       - run: pytest                                  # info_extractor component
         working-directory: info_extractor
+      - run: pytest                                  # company_scraper component
+        working-directory: company_scraper

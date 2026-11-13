@@ -108,6 +108,7 @@ flowchart TD
 | `job_scraper/scripts/setup_wake_schedule.sh` | One-time `sudo pmset repeat wake` so the Mac wakes for the overnight run |
 | `job_scraper/infra/linkedin-scraper.plist.example` | launchd schedule template (multiple fire-times/day + `--skip-if-recent` guard) |
 | `info_extractor/` | Peer component: local-LLM (Ollama) extraction of skills/competencies from each `job_description` into a typed `job_skills` table in the shared DB |
+| `company_scraper/` | Peer component: weekly scrape of 100 target companies' **official career sites** via their ATS JSON APIs (Greenhouse live; Lever/Ashby/Workday/custom next), normalized into the same `Job` schema in the shared `jobs` table (`source='company_site'`) |
 
 ## Data Model
 
