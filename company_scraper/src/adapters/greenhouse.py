@@ -23,7 +23,6 @@ def to_job(raw: dict, company: dict, family: str, scrape_dt: str) -> Job:
     """Maps one Greenhouse posting to a Job."""
     location = (raw.get("location") or {}).get("name")
     description = normalize.html_to_text(raw.get("content"))
-    fields = {k: v for k, v in normalize.salary_fields(description).items() if k in Job.__dataclass_fields__}
     return Job(
         job_id=normalize.make_job_id(ATS, company["slug"], raw["id"]),
         job_url=raw.get("absolute_url") or "",
@@ -37,5 +36,5 @@ def to_job(raw: dict, company: dict, family: str, scrape_dt: str) -> Job:
         posted_at_estimate=raw.get("first_published") or raw.get("updated_at"),
         apply_type="external",
         ats=ATS,
-        **fields,
+        **normalize.job_fields(normalize.salary_fields(description)),
     )
