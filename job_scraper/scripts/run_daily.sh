@@ -46,7 +46,10 @@ echo "===== LinkedIn scraper started at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ====
 if [[ "$SKIP_IF_RECENT" -eq 1 ]]; then
     DB="$REPO_DIR/data/jobs.db"
     if [[ -f "$DB" ]]; then
-        recent=$(sqlite3 "$DB" "SELECT COUNT(*) FROM runs WHERE status='ok' AND started_at >= datetime('now','-20 hours')" 2>/dev/null || echo 0)
+        # datetime(started_at) normalizes the stored ISO-8601 'T'/offset form so it
+        # compares correctly against datetime('now',...); a raw string compare was
+        # wrong ('T' > ' ' made same-date rows always look "recent" -> over-skip ~2d).
+        recent=$(sqlite3 "$DB" "SELECT COUNT(*) FROM runs WHERE status='ok' AND datetime(started_at) >= datetime('now','-20 hours')" 2>/dev/null || echo 0)
         if [[ "${recent:-0}" -gt 0 ]]; then
             echo "===== Skipping: a run already succeeded in the last 20h ====="
             exit 0
