@@ -16,7 +16,7 @@ import yaml
 
 import config
 import store
-from adapters import base, greenhouse
+from adapters import ashby, base, greenhouse, lever
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s - %(message)s")
 log = logging.getLogger("main")
@@ -24,7 +24,7 @@ log = logging.getLogger("main")
 EXIT_OK = 0
 EXIT_ALL_FAILED = 3  # every routed company failed — likely network/ATS-wide breakage
 
-ADAPTERS = {greenhouse.ATS: greenhouse.fetch}  # ats name -> fetch(company, session, scrape_dt)
+ADAPTERS = {a.ATS: a.fetch for a in (greenhouse, lever, ashby)}  # ats name -> fetch(company, session, scrape_dt)
 
 
 def load_companies(only: str | None = None, company: str | None = None) -> list[dict]:
@@ -84,7 +84,7 @@ def parse_args(argv=None):
     p = argparse.ArgumentParser(prog="company_scraper", description="Official career-site scraper (ATS APIs)")
     sub = p.add_subparsers(dest="command", required=True)
     sc = sub.add_parser("scrape", help="Scrape all routable companies")
-    sc.add_argument("--only", default=None, help="Restrict to one ATS (e.g. greenhouse)")
+    sc.add_argument("--only", default=None, help="Restrict to one ATS (greenhouse | lever | ashby)")
     sc.add_argument("--company", default=None, help="Restrict to one company name")
     sc.add_argument("--db", default=config.DB_PATH, help="SQLite DB (default: shared data/jobs.db)")
     return p.parse_args(argv)
