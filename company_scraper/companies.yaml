@@ -1,0 +1,104 @@
+# Routing table: company -> ATS + board slug (verified against the live ATS API).
+# ats: null = not yet mapped; skipped until its adapter/mapping lands (later PRs).
+# Source list: ryq99/kb_interview_prep/target_company_simple.md (100 companies).
+companies:
+  - {name: "Stripe", ats: greenhouse, slug: stripe}
+  - {name: "Google", ats: null}
+  - {name: "Databricks", ats: greenhouse, slug: databricks}
+  - {name: "NVIDIA", ats: null}
+  - {name: "Amazon", ats: null}
+  - {name: "Airbnb", ats: greenhouse, slug: airbnb}
+  - {name: "Meta", ats: null}
+  - {name: "Microsoft", ats: null}
+  - {name: "Valve", ats: null}
+  - {name: "Anthropic", ats: greenhouse, slug: anthropic}
+  - {name: "OpenAI", ats: null}
+  - {name: "DoorDash", ats: null}
+  - {name: "Shopify", ats: null}
+  - {name: "Walmart Global Tech", ats: null}
+  - {name: "Netflix", ats: null}
+  - {name: "LinkedIn", ats: null}
+  - {name: "Snowflake", ats: null}
+  - {name: "Apple", ats: null}
+  - {name: "Spotify", ats: null}
+  - {name: "ElevenLabs", ats: null}
+  - {name: "Axon", ats: greenhouse, slug: axon}
+  - {name: "Uber", ats: null}
+  - {name: "Instacart", ats: greenhouse, slug: instacart}
+  - {name: "Affirm", ats: greenhouse, slug: affirm}
+  - {name: "TikTok / ByteDance", ats: null}
+  - {name: "Block (Cash App)", ats: greenhouse, slug: block}
+  - {name: "Mercury", ats: greenhouse, slug: mercury}
+  - {name: "The Trade Desk", ats: greenhouse, slug: thetradedesk}
+  - {name: "Palantir", ats: null}
+  - {name: "Datadog", ats: greenhouse, slug: datadog}
+  - {name: "Zillow", ats: null}
+  - {name: "Chewy", ats: null}
+  - {name: "Samsara", ats: greenhouse, slug: samsara}
+  - {name: "Visa", ats: null}
+  - {name: "Pinterest", ats: greenhouse, slug: pinterest}
+  - {name: "Robinhood", ats: greenhouse, slug: robinhood}
+  - {name: "Duolingo", ats: greenhouse, slug: duolingo}
+  - {name: "SoFi", ats: greenhouse, slug: sofi}
+  - {name: "Upstart", ats: greenhouse, slug: upstart}
+  - {name: "Lyft", ats: greenhouse, slug: lyft}
+  - {name: "Reddit", ats: greenhouse, slug: reddit}
+  - {name: "Coinbase", ats: greenhouse, slug: coinbase}
+  - {name: "Capital One", ats: null}
+  - {name: "GitHub", ats: null}
+  - {name: "Disney", ats: null}
+  - {name: "Expedia Group", ats: null}
+  - {name: "MongoDB", ats: greenhouse, slug: mongodb}
+  - {name: "Grafana Labs", ats: greenhouse, slug: grafanalabs}
+  - {name: "Truveta", ats: greenhouse, slug: truveta}
+  - {name: "Flexport", ats: greenhouse, slug: flexport}
+  - {name: "Ramp", ats: greenhouse, slug: ramp}
+  - {name: "Discord", ats: greenhouse, slug: discord}
+  - {name: "Elastic", ats: greenhouse, slug: elastic}
+  - {name: "Toast", ats: greenhouse, slug: toast}
+  - {name: "Remitly", ats: null}
+  - {name: "Redfin (Rocket)", ats: null}
+  - {name: "Starbucks", ats: null}
+  - {name: "AI2 (Allen Institute)", ats: null}
+  - {name: "Atlassian", ats: null}
+  - {name: "JPMorgan Chase", ats: null}
+  - {name: "Salesforce", ats: null}
+  - {name: "Cloudflare", ats: greenhouse, slug: cloudflare}
+  - {name: "Roku", ats: null}
+  - {name: "Adobe", ats: null}
+  - {name: "American Express", ats: null}
+  - {name: "T-Mobile", ats: null}
+  - {name: "Hugging Face", ats: null}
+  - {name: "ServiceNow", ats: null}
+  - {name: "Confluent", ats: null}
+  - {name: "Plaid", ats: null}
+  - {name: "Intuit", ats: null}
+  - {name: "Snap", ats: null}
+  - {name: "Twitch", ats: greenhouse, slug: twitch}
+  - {name: "Figma", ats: greenhouse, slug: figma}
+  - {name: "Tubi", ats: greenhouse, slug: tubi}
+  - {name: "The Pokémon Company International", ats: null}
+  - {name: "Roblox", ats: greenhouse, slug: roblox}
+  - {name: "PitchBook", ats: null}
+  - {name: "GitLab", ats: greenhouse, slug: gitlab}
+  - {name: "CoreWeave", ats: greenhouse, slug: coreweave}
+  - {name: "Runway", ats: null}
+  - {name: "Highspot", ats: null}
+  - {name: "Glean", ats: null}
+  - {name: "Tableau", ats: null}
+  - {name: "PayPal", ats: null}
+  - {name: "Cohere", ats: null}
+  - {name: "Smartsheet", ats: greenhouse, slug: smartsheet}
+  - {name: "OfferUp", ats: greenhouse, slug: offerup}
+  - {name: "Perplexity", ats: null}
+  - {name: "Dolby", ats: null}
+  - {name: "Riot Games", ats: greenhouse, slug: riotgames}
+  - {name: "Scale AI", ats: greenhouse, slug: scaleai}
+  - {name: "Workday", ats: null}
+  - {name: "Zoom", ats: null}
+  - {name: "Amplitude", ats: null}
+  - {name: "Braze", ats: greenhouse, slug: braze}
+  - {name: "Fox Corporation", ats: null}
+  - {name: "Webtoon", ats: null}
+  - {name: "Niantic", ats: null}
+  - {name: "Sphere", ats: null}
