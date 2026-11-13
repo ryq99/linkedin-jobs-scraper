@@ -41,3 +41,37 @@ def test_salary_fields_reuses_linkedin_parser():
 
 def test_job_id_is_namespaced():
     assert normalize.make_job_id("greenhouse", "stripe", 123) == "company_site:greenhouse:stripe:123"
+
+
+@pytest.mark.parametrize("value,loc,expected", [
+    ("hybrid", None, "Hybrid"), ("OnSite", None, "On-site"), ("Remote", None, "Remote"),
+    (None, "Remote - US", "Remote"), ("unspecified", "Austin, TX", "On-site")])
+def test_workplace_from_ats(value, loc, expected):
+    assert normalize.workplace_from_ats(value, loc) == expected
+
+
+@pytest.mark.parametrize("value,expected", [
+    ("FullTime", "Full-time"), ("Permanent", "Full-time"), ("Intern", "Internship"),
+    ("Contract", "Contract"), ("Part-time", "Part-time"), (None, None)])
+def test_employment_type(value, expected):
+    assert normalize.employment_type(value) == expected
+
+
+def test_structured_salary_hourly_and_empty():
+    assert normalize.structured_salary(50, 70, "per-hour-wage")["salary_period"] == "hr"
+    assert normalize.structured_salary(None, None, "1 YEAR") == {}
+
+
+@pytest.mark.parametrize("text,expected", [
+    ("Pay: $207,000—$218,500 USD", (207000, 218500, "yr")),
+    ("range $180,000—$190,000 CAD and $207,000—$218,500 USD", (207000, 218500, "yr")),  # USD preferred
+    ("$150K - $200K plus equity", (150000, 200000, "yr")),
+    ("$45.50 - $60 per hour", (45.5, 60, "hr")),
+    ("our $1B+ ads business", None),  # not a range
+])
+def test_range_salary_fallback(text, expected):
+    got = normalize.salary_fields(text)
+    if expected is None:
+        assert got == {}
+    else:
+        assert (got["salary_min"], got["salary_max"], got["salary_period"]) == expected

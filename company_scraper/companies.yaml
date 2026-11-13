@@ -1,5 +1,7 @@
 # Routing table: company -> ATS + board slug (verified against the live ATS API).
 # ats: null = not yet mapped; skipped until its adapter/mapping lands (later PRs).
+# Verify board IDENTITY, not just HTTP 200: generic slugs collide (greenhouse 'disney' is a
+# Beatles tribute band, 'fox' a vet clinic; ashby 'sphere' a fintech; 'runway' ambiguous).
 # Source list: ryq99/kb_interview_prep/target_company_simple.md (100 companies).
 companies:
   - {name: "Stripe", ats: greenhouse, slug: stripe}
@@ -12,16 +14,16 @@ companies:
   - {name: "Microsoft", ats: null}
   - {name: "Valve", ats: null}
   - {name: "Anthropic", ats: greenhouse, slug: anthropic}
-  - {name: "OpenAI", ats: null}
-  - {name: "DoorDash", ats: null}
+  - {name: "OpenAI", ats: ashby, slug: openai}
+  - {name: "DoorDash", ats: greenhouse, slug: doordashusa}
   - {name: "Shopify", ats: null}
   - {name: "Walmart Global Tech", ats: null}
   - {name: "Netflix", ats: null}
   - {name: "LinkedIn", ats: null}
-  - {name: "Snowflake", ats: null}
+  - {name: "Snowflake", ats: ashby, slug: snowflake}
   - {name: "Apple", ats: null}
-  - {name: "Spotify", ats: null}
-  - {name: "ElevenLabs", ats: null}
+  - {name: "Spotify", ats: lever, slug: spotify}
+  - {name: "ElevenLabs", ats: ashby, slug: elevenlabs}
   - {name: "Axon", ats: greenhouse, slug: axon}
   - {name: "Uber", ats: null}
   - {name: "Instacart", ats: greenhouse, slug: instacart}
@@ -30,7 +32,7 @@ companies:
   - {name: "Block (Cash App)", ats: greenhouse, slug: block}
   - {name: "Mercury", ats: greenhouse, slug: mercury}
   - {name: "The Trade Desk", ats: greenhouse, slug: thetradedesk}
-  - {name: "Palantir", ats: null}
+  - {name: "Palantir", ats: lever, slug: palantir}
   - {name: "Datadog", ats: greenhouse, slug: datadog}
   - {name: "Zillow", ats: null}
   - {name: "Chewy", ats: null}
@@ -71,7 +73,7 @@ companies:
   - {name: "Hugging Face", ats: null}
   - {name: "ServiceNow", ats: null}
   - {name: "Confluent", ats: null}
-  - {name: "Plaid", ats: null}
+  - {name: "Plaid", ats: ashby, slug: plaid}
   - {name: "Intuit", ats: null}
   - {name: "Snap", ats: null}
   - {name: "Twitch", ats: greenhouse, slug: twitch}
@@ -87,18 +89,18 @@ companies:
   - {name: "Glean", ats: null}
   - {name: "Tableau", ats: null}
   - {name: "PayPal", ats: null}
-  - {name: "Cohere", ats: null}
+  - {name: "Cohere", ats: ashby, slug: cohere}
   - {name: "Smartsheet", ats: greenhouse, slug: smartsheet}
   - {name: "OfferUp", ats: greenhouse, slug: offerup}
-  - {name: "Perplexity", ats: null}
+  - {name: "Perplexity", ats: ashby, slug: perplexity}
   - {name: "Dolby", ats: null}
   - {name: "Riot Games", ats: greenhouse, slug: riotgames}
   - {name: "Scale AI", ats: greenhouse, slug: scaleai}
   - {name: "Workday", ats: null}
   - {name: "Zoom", ats: null}
-  - {name: "Amplitude", ats: null}
+  - {name: "Amplitude", ats: ashby, slug: amplitude}
   - {name: "Braze", ats: greenhouse, slug: braze}
   - {name: "Fox Corporation", ats: null}
   - {name: "Webtoon", ats: null}
   - {name: "Niantic", ats: null}
-  - {name: "Sphere", ats: null}
+  - {name: "Sphere", ats: greenhouse, slug: sphereentertainment}
