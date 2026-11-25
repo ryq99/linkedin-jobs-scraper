@@ -10,3 +10,5 @@ ollama
 boto3
 awswrangler
 pytest
+requests
+pyyaml
