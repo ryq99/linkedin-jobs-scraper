@@ -22,6 +22,7 @@ DETAIL_DELAY_RANGE = (2.0, 5.0)  # jittered seconds between detail-page visits
 MAX_RUN_SECONDS = int(os.getenv("MAX_RUN_SECONDS", "3600"))      # whole-run wall-clock cap (60 min)
 DETAIL_VISIT_TIMEOUT = int(os.getenv("DETAIL_VISIT_TIMEOUT", "90"))  # per detail-page hard cap
 HARVEST_PAGE_TIMEOUT = int(os.getenv("HARVEST_PAGE_TIMEOUT", "60"))  # per search-results page hard cap
+CLEANUP_TIMEOUT = int(os.getenv("CLEANUP_TIMEOUT", "60"))  # per teardown step (trace stop, browser close)
 
 # --- paths ------------------------------------------------------------------
 DB_PATH = Path(os.getenv("DB_PATH", DATA_DIR / "jobs.db"))         # shared (repo root)

@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import os
 import random
 import subprocess
 import sys
@@ -111,6 +112,24 @@ def scrape_details(page, conn, cards: dict[str, dict], new_ids: list[str], run_d
         time.sleep(random.uniform(*config.DETAIL_DELAY_RANGE))
     return ok, failed
 
+def bounded_cleanup(label: str, fn, *args) -> bool:
+    """Runs one browser teardown step under a hard cap; True if it finished.
+
+    A wedged browser once left the main thread spinning inside tracing.stop()
+    for 8 days after the run deadline fired, and launchd skips every scheduled
+    slot while the job is still alive.
+    """
+    try:
+        with watchdog.time_limit(config.CLEANUP_TIMEOUT, label):
+            fn(*args)
+        return True
+    except Exception as e:
+        log.error("Teardown step %s failed: %s", label, e)
+        return False
+
+def save_failed_trace(context, ts: str) -> None:
+    log.error("Run failed — trace saved to %s", browser.save_trace(context, f"scrape_{ts}"))
+
 def cmd_scrape(args) -> int:
     run_dt = datetime.now(timezone.utc)
     ts = run_dt.strftime("%Y-%m-%d-%H-%M")
@@ -153,13 +172,16 @@ def cmd_scrape(args) -> int:
         log.error("Run aborted by watchdog: %s", e)
         notify(f"Scrape aborted: {e}")
     finally:
-        if status == "ok":  # keep the trace only for failed runs — the cron post-mortem
-            browser.discard_trace(context)
-        else:
-            log.error("Run failed — trace saved to %s", browser.save_trace(context, f"scrape_{ts}"))
-        browser.close(pw, context)
+        # Record before teardown: per-job commits already persisted the data, so
+        # a teardown that wedges anyway (wrapper kills it) loses nothing.
         store.record_run(conn, run_dt.isoformat(), datetime.now(timezone.utc).isoformat(),
                          ";".join(config.SCRAPE_QUERIES), len(cards), len(new_ids), status)
+        if status == "ok":  # keep the trace only for failed runs — the cron post-mortem
+            clean = bounded_cleanup("discard_trace", browser.discard_trace, context)
+        else:
+            clean = bounded_cleanup("save_trace", save_failed_trace, context, ts)
+        # A browser that wedged on trace stop would wedge on close too — skip it.
+        clean = clean and bounded_cleanup("browser.close", browser.close, pw, context)
 
     # export + run report
     day = ts[:10]
@@ -184,7 +206,13 @@ def cmd_scrape(args) -> int:
                     else:
                         time.sleep(10 * attempt)
     log.info("Done: %d rows first seen on %s", len(df), day)
-    return EXIT_DETAIL_BROKEN if detail_broken else EXIT_OK
+    code = EXIT_DETAIL_BROKEN if detail_broken else EXIT_OK
+    if not clean:
+        # Playwright's driver thread would block interpreter shutdown; skip it.
+        # The node driver exits when our pipe closes, taking Chromium with it.
+        logging.shutdown()
+        os._exit(code)
+    return code
 
 def cmd_export(args) -> int:
     conn = store.connect(config.DB_PATH)
