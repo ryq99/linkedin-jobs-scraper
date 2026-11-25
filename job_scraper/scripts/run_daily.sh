@@ -69,15 +69,39 @@ if [[ -f "$ENV_FILE" ]]; then
 fi
 
 cd "$PROJECT_DIR"
-# `caffeinate -is` holds idle- AND system-sleep assertions for the scrape's
-# lifetime (released when python exits): -i stops idle sleep (battery + AC); -s
-# stops system/lid-close sleep but only on AC — macOS forces clamshell sleep on
-# battery regardless, so overnight runs still need the laptop plugged in. Without
-# -s, closing the lid mid-run suspended the scrape (ballooned wall-clock, no
-# clean finish).
+# `caffeinate -is -w $$` holds idle- AND system-sleep assertions for as long as
+# this script lives: -i stops idle sleep (battery + AC); -s stops system/lid-close
+# sleep but only on AC — macOS forces clamshell sleep on battery regardless, so
+# overnight runs still need the laptop plugged in. Without -s, closing the lid
+# mid-run suspended the scrape (ballooned wall-clock, no clean finish).
+caffeinate -is -w $$ &
+
+# Hard wall-clock cap on the whole process tree. The in-process watchdog can't
+# save a run whose teardown wedges (Nov 2026: python spun in tracing.stop() for
+# 8 days), and launchd silently skips every scheduled slot while the job is
+# still alive. Default = run budget + 30 min for teardown and export.
+HARD_TIMEOUT="${RUN_HARD_TIMEOUT:-$(( ${MAX_RUN_SECONDS:-3600} + 1800 ))}"
+
+kill_tree() {  # SIGKILL a pid and all its descendants (python -> node -> chromium)
+    local child
+    for child in $(pgrep -P "$1"); do kill_tree "$child"; done
+    kill -KILL "$1" 2>/dev/null || true
+}
+
+python3 src/main.py scrape ${ARGS[@]+"${ARGS[@]}"} &
+PY_PID=$!
+(
+    sleep "$HARD_TIMEOUT"
+    echo "===== Hard timeout: still running after ${HARD_TIMEOUT}s — killing process tree ====="
+    osascript -e 'display notification "Scrape killed by hard timeout" with title "ds_jobs scraper"' >/dev/null 2>&1 || true
+    kill_tree "$PY_PID"
+) &
+WATCHER_PID=$!
+
 # `|| EXIT_CODE=$?` keeps set -e from aborting before the footer logs on failure.
 EXIT_CODE=0
-caffeinate -is python3 src/main.py scrape ${ARGS[@]+"${ARGS[@]}"} || EXIT_CODE=$?
+wait "$PY_PID" || EXIT_CODE=$?
+kill_tree "$WATCHER_PID"  # also reaps its pending sleep
 
 echo "===== Scraper finished at $(date -u '+%Y-%m-%d %H:%M:%S UTC') (exit $EXIT_CODE) ====="
 

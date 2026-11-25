@@ -45,3 +45,15 @@ def test_deadline_check_silent_within_budget():
     d = Deadline(60)
     d.check("harvest")  # plenty of budget left — must not raise
     assert d.remaining() > 0
+
+
+def test_bounded_cleanup_abandons_a_wedged_teardown(monkeypatch):
+    # The 8-day hang: teardown (tracing.stop) wedged after the run deadline fired.
+    import config
+    import main
+    monkeypatch.setattr(config, "CLEANUP_TIMEOUT", 0.2)
+    a, _b = socket.socketpair()
+    start = time.monotonic()
+    assert main.bounded_cleanup("wedged", a.recv, 1024) is False
+    assert time.monotonic() - start < 1.0
+    assert main.bounded_cleanup("fine", lambda: None) is True
